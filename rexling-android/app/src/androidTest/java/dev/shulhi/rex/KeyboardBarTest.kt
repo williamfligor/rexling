@@ -159,12 +159,12 @@ class KeyboardBarTest {
         ui.onNodeWithContentDescription("Shift").assertIsNotEnabled()
         ui.onNodeWithContentDescription("Arrow keys").assertIsNotEnabled().performTouchInput {click()}
         ui.onNodeWithContentDescription("Arrow joystick").assertDoesNotExist()
-        ui.onNodeWithContentDescription("Enter").assertIsNotEnabled().performTouchInput {click()}
+        ui.onNodeWithContentDescription("Show extra keys").assertIsNotEnabled().performTouchInput {click()}
         ui.runOnIdle {assertTrue(sent.isEmpty())}
     }
     @Test fun narrowPhoneKeepsEveryControlOnOneRowAndModifiersFullyVisible() {
         keyboard(width=320.dp)
-        val labels=listOf("Escape","Control","Alt","Shift","Tab key","Arrow keys","Enter","Hide keyboard")
+        val labels=listOf("Escape","Control","Alt","Shift","Tab key","Arrow keys","Show extra keys","Hide keyboard")
         val bounds=labels.map {label->
             ui.onNodeWithContentDescription(label).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         }
@@ -173,7 +173,7 @@ class KeyboardBarTest {
         assertTrue("Reclaimed chevron space must keep keys at least 34 dp wide",bounds[5].width>=with(ui.density) {34.dp.toPx()}-1f)
         val widths=bounds.take(7).map {it.width}
         assertTrue("No key should lose pixels to clipping",widths.max()-widths.min()<=1f)
-        ui.onNodeWithContentDescription("Show extra keys").assertIsNotDisplayed()
+        ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed()
     }
 
     @Test fun viewingConnectedTerminalKeepsIconsCrispWithoutEnablingTyping() {
@@ -185,7 +185,7 @@ class KeyboardBarTest {
         assertEquals(owning.width,viewing.width);assertEquals(owning.height,viewing.height)
         for(y in 0 until owning.height) for(x in 0 until owning.width)
             assertEquals("Read-only mode must preserve icon contrast at $x,$y",owning[x,y],viewing[x,y])
-        for(label in listOf("Escape","Control","Alt","Shift","Tab key","Arrow keys","Enter"))
+        for(label in listOf("Escape","Control","Alt","Shift","Tab key","Arrow keys","Show extra keys"))
             ui.onNodeWithContentDescription(label).assertIsNotEnabled().performTouchInput {click()}
         ui.runOnIdle {assertTrue("Readable icons must not enable terminal input",sent.isEmpty())}
     }
@@ -208,29 +208,29 @@ class KeyboardBarTest {
         ui.onNodeWithContentDescription("Escape").assertIsEnabled()
     }
 
-    @Test fun swipeRightRevealsChevronBeforeEscapeAndClosingRestoresTheRow() {
+    @Test fun extrasToggleKeepsItsSlotAndOpensTheExtraKeysWithoutMovingTheRow() {
         keyboard()
         val escapeBefore=ui.onNodeWithContentDescription("Escape").fetchSemanticsNode().boundsInRoot
         val keyboardBefore=ui.onNodeWithContentDescription("Hide keyboard").fetchSemanticsNode().boundsInRoot
-        ui.onNodeWithContentDescription("Enter").performTouchInput {click()}
-        ui.runOnIdle {assertEquals(listOf("\r"),sent)}
-        ui.onNodeWithContentDescription("Show extra keys").assertIsNotDisplayed()
+        // The extra keys sit in the last slot, where Enter used to be: nothing scrolls,
+        // and opening them leaves every key exactly where it was.
+        val chevron=ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val arrow=ui.onNodeWithContentDescription("Arrow keys").fetchSemanticsNode().boundsInRoot
+        assertTrue(chevron.left>=arrow.right)
         ui.onNodeWithContentDescription("Function key F1").assertDoesNotExist()
-        ui.onNodeWithContentDescription("Terminal keys").performTouchInput {swipeRight()}
-        ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed().performTouchInput {click()}
+        ui.onNodeWithContentDescription("Show extra keys").performTouchInput {click()}
         ui.onNodeWithContentDescription("Function key F1").assertIsDisplayed()
         ui.onNodeWithContentDescription("Function key F12").assertIsDisplayed()
-        val chevron=ui.onNodeWithContentDescription("Hide extra keys").fetchSemanticsNode().boundsInRoot
-        val escape=ui.onNodeWithContentDescription("Escape").fetchSemanticsNode().boundsInRoot
-        assertTrue(chevron.right<escape.left)
+        assertEquals(chevron,ui.onNodeWithContentDescription("Hide extra keys").fetchSemanticsNode().boundsInRoot)
+        assertEquals(escapeBefore,ui.onNodeWithContentDescription("Escape").fetchSemanticsNode().boundsInRoot)
         assertEquals(keyboardBefore,ui.onNodeWithContentDescription("Hide keyboard").fetchSemanticsNode().boundsInRoot)
-        capture("hidden-chevron-revealed",ui.onNodeWithTag("Keyboard test area"))
+        capture("extras-open",ui.onNodeWithTag("Keyboard test area"))
         ui.onNodeWithContentDescription("Hide extra keys").performTouchInput {click()}
         ui.onNodeWithContentDescription("Function key F1").assertDoesNotExist()
-        ui.onNodeWithContentDescription("Show extra keys").assertIsNotDisplayed()
+        ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed()
         assertEquals(escapeBefore,ui.onNodeWithContentDescription("Escape").fetchSemanticsNode().boundsInRoot)
-        ui.runOnIdle {assertEquals(listOf("\r"),sent);assertEquals(0,keyboardToggles)}
-        capture("hidden-chevron-default",ui.onNodeWithTag("Keyboard test area"))
+        ui.runOnIdle {assertTrue(sent.isEmpty());assertEquals(0,keyboardToggles)}
+        capture("extras-closed",ui.onNodeWithTag("Keyboard test area"))
     }
     @Test fun hidingTheKeyboardCollapsesExtrasAndRestoresEscapeFirst() {
         val visible=mutableStateOf(true)
@@ -238,17 +238,14 @@ class KeyboardBarTest {
             KeyboardBar(true,true,false,false,false,visible.value,{},{},{},{},{},{sent+=it},onKeyboard={visible.value=!visible.value})
         }}}
         val initial=ui.onNodeWithContentDescription("Escape").fetchSemanticsNode().boundsInRoot
-        ui.onNodeWithContentDescription("Terminal keys").performTouchInput {swipeRight()}
-        // This test isolates the visibility reset; physical reveal/taps are covered above.
         ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed()
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) {it()}
         ui.onNodeWithContentDescription("Function key F1").assertIsDisplayed()
         ui.onNodeWithContentDescription("Hide keyboard").performTouchInput {click()}
         ui.onNodeWithContentDescription("Function key F1").assertDoesNotExist()
-        ui.onNodeWithContentDescription("Show extra keys").assertIsNotDisplayed()
         assertEquals(initial,ui.onNodeWithContentDescription("Escape").fetchSemanticsNode().boundsInRoot)
         ui.onNodeWithContentDescription("Show keyboard").performTouchInput {click()}
-        ui.onNodeWithContentDescription("Show extra keys").assertIsNotDisplayed()
+        ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed()
         ui.runOnIdle {assertTrue(sent.isEmpty())}
     }
     @Test fun changingTheInputTargetCancelsTheJoystick() {
@@ -308,14 +305,14 @@ class KeyboardBarTest {
             }
         }}
         capture("arrow-dock",ui.onNodeWithTag("Keyboard dock"))
-        val enter=ui.onNodeWithContentDescription("Enter").fetchSemanticsNode().boundsInRoot
+        val extras=ui.onNodeWithContentDescription("Show extra keys").fetchSemanticsNode().boundsInRoot
         val trigger=ui.onNodeWithContentDescription("Arrow keys")
         trigger.performTouchInput {down(center);moveTo(center+androidx.compose.ui.geometry.Offset(-40f,0f))}
         val popup=ui.onNodeWithContentDescription("Arrow joystick")
         popup.assertIsDisplayed()
         val face=popup.fetchSemanticsNode().boundsInRoot
         assertEquals(face.width,face.height,1f)
-        assertEquals(enter,ui.onNodeWithContentDescription("Enter").fetchSemanticsNode().boundsInRoot)
+        assertEquals(extras,ui.onNodeWithContentDescription("Show extra keys").fetchSemanticsNode().boundsInRoot)
         capture("arrow-joystick-light",popup)
         ui.runOnIdle {dark.value=true}
         popup.assertIsDisplayed();capture("arrow-joystick-dark",popup)
