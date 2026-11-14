@@ -555,16 +555,16 @@ internal val MonoUi = FontFamily(Font(R.font.jetbrains_mono_regular),Font(R.font
     Column(Modifier.fillMaxWidth().padding(horizontal=8.dp)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outline.copy(alpha=.4f)))
         Row(Modifier.fillMaxWidth().height(45.dp).padding(vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
-            // One row that always fits: seven equal slots and no scrolling. The extra
-            // keys take the last slot, so every modifier stays where it has always been.
+            // One row that always fits: seven equal slots and no scrolling. Enter keeps
+            // its place after the arrow group; the extra keys take the last slot.
             Row(Modifier.weight(1f).fillMaxHeight().systemGestureExclusion()
                 .semantics {contentDescription="Terminal keys"},horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
                 DockKey("esc",controlled,description="Escape",modifier=Modifier.weight(1f),icon=ChromeIcon.ESCAPE,readable=readable) {onKey("esc")}
                 ControlDockKey(controlled,control,readable,Modifier.weight(1f),onControl,onControlShortcut,shortcutGesture)
                 DockKey("alt",controlled,alt,description="Alt",modifier=Modifier.weight(1f),icon=ChromeIcon.ALT,readable=readable,onClick=onAlt)
-                ShiftDockKey(controlled,shift,Modifier.weight(1f),onShift,onShiftPress,onShiftRelease,readable=readable)
                 DockKey("tab",controlled,description="Tab key",modifier=Modifier.weight(1f),icon=ChromeIcon.TAB,readable=readable) {onKey("tab")}
                 ArrowJoystickDockKey(controlled,Modifier.weight(1f),onKey,readable,inputKey,keyboardVisible,arrowJoystickEnabled,onPrompt)
+                DockKey("enter",controlled,description="Enter",modifier=Modifier.weight(1f),icon=ChromeIcon.ENTER,readable=readable) {onKey("enter")}
                 DockKey("extras",controlled,active=expanded,description=if(expanded) "Hide extra keys" else "Show extra keys",
                     modifier=Modifier.weight(1f),icon=ChromeIcon.CHEVRON,iconRotation=if(expanded) 180f else 0f,readable=readable) {expanded=!expanded}
             }
@@ -574,7 +574,10 @@ internal val MonoUi = FontFamily(Font(R.font.jetbrains_mono_regular),Font(R.font
         if(expanded) {
             val extra=listOf((1..6).map {"F$it" to "f$it"},(7..12).map {"F$it" to "f$it"},
                 listOf("Home" to "home","PgUp" to "pageup","PgDn" to "pagedown","End" to "end","Ins" to "insert","Del" to "delete","Backspace" to "backspace"))
-            for(row in extra) Row(Modifier.fillMaxWidth().height(43.dp).padding(bottom=6.dp),horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+            for((index,row) in extra.withIndex()) Row(Modifier.fillMaxWidth().height(43.dp).padding(bottom=6.dp),horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+                // Shift keeps its tap-to-latch and hold-for-several gesture, one row under
+                // the arrows it modifies: the top row is full with Enter and the panel.
+                if(index==0) ShiftDockKey(controlled,shift,Modifier.weight(1f),onShift,onShiftPress,onShiftRelease,readable=readable)
                 for((label,key) in row) DockKey(label,controlled,description=if(key.startsWith("f")) "Function key $label" else label,modifier=Modifier.weight(1f),readable=readable,icon=if(key=="backspace") ChromeIcon.BACKSPACE else null,repeat=key in listOf("delete","backspace"),inputKey=inputKey) {onKey(key)}
             }
         }

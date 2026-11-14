@@ -48,8 +48,9 @@ signing separately before publishing. SDK paths and caches remain ignored.
 - Typing uses Rex’s ordered key-event stream with up to eight requests in flight.
   Delayed acknowledgments no longer stop terminal output or rendering. Adjacent
   queued plain text can be combined without delaying the first keystroke.
-- The one-row keyboard dock fits without scrolling: modifiers, a hold-and-slide arrow joystick,
-  hold/repeat, Ctrl shortcuts and a key that expands the F1–F12 panel.
+- The one-row keyboard dock fits without scrolling: Esc, Ctrl, Alt, Tab, a hold-and-slide arrow joystick,
+  Enter and a key that expands the extra keys. Shift (tap to latch, hold for several keys), F1–F12,
+  Home/End, paging, Insert/Delete and Backspace live in that panel, with hold/repeat on the delete keys.
 - **⋮ → Preferences → Appearance** saves independent light/dark presets, including the
   Rexling defaults. Font size changes in 1-sp steps. Theme requests are sent
   while owning the pane; programs may override their own colorscheme.

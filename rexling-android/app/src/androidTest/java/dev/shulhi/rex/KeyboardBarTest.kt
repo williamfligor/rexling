@@ -56,6 +56,11 @@ class KeyboardBarTest {
             }
         }
     }
+    /** Shift lives in the extra-keys panel: the top row is full with Enter and the toggle. */
+    private fun expandExtras() {
+        ui.onNodeWithContentDescription("Show extra keys").performTouchInput {click()}
+        ui.waitForIdle()
+    }
     @Test fun holdingKeyboardPastesOnceWithoutTogglingAndTapStillToggles() {
         var pasted=0;var toggles=0
         val controlled=mutableStateOf(true)
@@ -71,7 +76,7 @@ class KeyboardBarTest {
         })
     }
     @Test fun shiftTapAppliesToOneArrowAndShiftTab() {
-        keyboard()
+        keyboard();expandExtras()
         ui.onNodeWithContentDescription("Shift").performTouchInput {click()}
         ui.onNodeWithContentDescription("Shift").assertIsSelected()
         joystick("left")
@@ -82,7 +87,7 @@ class KeyboardBarTest {
         ui.runOnIdle {assertEquals(listOf("\u001b[1;2D","\u001b[C","\u001b[Z"),sent)}
     }
     @Test fun holdingShiftWhileSteeringTheJoystickModifiesEveryRepeat() {
-        keyboard();ui.mainClock.autoAdvance=false
+        keyboard();expandExtras();ui.mainClock.autoAdvance=false
         val root=ui.onNodeWithTag("Keyboard test area")
         val origin=root.fetchSemanticsNode().boundsInRoot.topLeft
         val shift=ui.onNodeWithContentDescription("Shift").fetchSemanticsNode().boundsInRoot.center-origin
@@ -113,7 +118,7 @@ class KeyboardBarTest {
         ui.onNodeWithContentDescription("Arrow joystick").assertDoesNotExist()
     }
     @Test fun joystickPreviewDoesNotMoveTheDockAndUsesOneShotShift() {
-        keyboard()
+        keyboard();expandExtras()
         val tabBefore=ui.onNodeWithContentDescription("Tab key").fetchSemanticsNode().boundsInRoot
         ui.onNodeWithContentDescription("Shift").performTouchInput {click()}
         val arrow=ui.onNodeWithContentDescription("Arrow keys")
@@ -148,7 +153,7 @@ class KeyboardBarTest {
         ui.runOnIdle {assertEquals(count+1,sent.size);assertEquals(3,feedback.size)}
     }
     @Test fun cancelClearsHeldShiftAndDoesNotSendAnArrow() {
-        keyboard()
+        keyboard();expandExtras()
         ui.onNodeWithContentDescription("Shift").performTouchInput {down(center);cancel()}
         ui.onNodeWithContentDescription("Shift").assertIsNotSelected()
         ui.onNodeWithContentDescription("Arrow keys").performTouchInput {down(center);cancel()}
@@ -156,7 +161,7 @@ class KeyboardBarTest {
     }
     @Test fun arrowsRemainIndividuallyAccessibleAndDisabledControlsDoNotSend() {
         keyboard(enabled=false)
-        ui.onNodeWithContentDescription("Shift").assertIsNotEnabled()
+        ui.onNodeWithContentDescription("Shift").assertDoesNotExist()
         ui.onNodeWithContentDescription("Arrow keys").assertIsNotEnabled().performTouchInput {click()}
         ui.onNodeWithContentDescription("Arrow joystick").assertDoesNotExist()
         ui.onNodeWithContentDescription("Show extra keys").assertIsNotEnabled().performTouchInput {click()}
@@ -164,7 +169,7 @@ class KeyboardBarTest {
     }
     @Test fun narrowPhoneKeepsEveryControlOnOneRowAndModifiersFullyVisible() {
         keyboard(width=320.dp)
-        val labels=listOf("Escape","Control","Alt","Shift","Tab key","Arrow keys","Show extra keys","Hide keyboard")
+        val labels=listOf("Escape","Control","Alt","Tab key","Arrow keys","Enter","Show extra keys","Hide keyboard")
         val bounds=labels.map {label->
             ui.onNodeWithContentDescription(label).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         }
@@ -174,6 +179,7 @@ class KeyboardBarTest {
         val widths=bounds.take(7).map {it.width}
         assertTrue("No key should lose pixels to clipping",widths.max()-widths.min()<=1f)
         ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed()
+        ui.onNodeWithContentDescription("Shift").assertDoesNotExist()
     }
 
     @Test fun viewingConnectedTerminalKeepsIconsCrispWithoutEnablingTyping() {
@@ -185,7 +191,7 @@ class KeyboardBarTest {
         assertEquals(owning.width,viewing.width);assertEquals(owning.height,viewing.height)
         for(y in 0 until owning.height) for(x in 0 until owning.width)
             assertEquals("Read-only mode must preserve icon contrast at $x,$y",owning[x,y],viewing[x,y])
-        for(label in listOf("Escape","Control","Alt","Shift","Tab key","Arrow keys","Show extra keys"))
+        for(label in listOf("Escape","Control","Alt","Tab key","Arrow keys","Enter","Show extra keys"))
             ui.onNodeWithContentDescription(label).assertIsNotEnabled().performTouchInput {click()}
         ui.runOnIdle {assertTrue("Readable icons must not enable terminal input",sent.isEmpty())}
     }
@@ -219,6 +225,7 @@ class KeyboardBarTest {
         assertTrue(chevron.left>=arrow.right)
         ui.onNodeWithContentDescription("Function key F1").assertDoesNotExist()
         ui.onNodeWithContentDescription("Show extra keys").performTouchInput {click()}
+        ui.onNodeWithContentDescription("Shift").assertIsDisplayed()
         ui.onNodeWithContentDescription("Function key F1").assertIsDisplayed()
         ui.onNodeWithContentDescription("Function key F12").assertIsDisplayed()
         assertEquals(chevron,ui.onNodeWithContentDescription("Hide extra keys").fetchSemanticsNode().boundsInRoot)
@@ -226,6 +233,7 @@ class KeyboardBarTest {
         assertEquals(keyboardBefore,ui.onNodeWithContentDescription("Hide keyboard").fetchSemanticsNode().boundsInRoot)
         capture("extras-open",ui.onNodeWithTag("Keyboard test area"))
         ui.onNodeWithContentDescription("Hide extra keys").performTouchInput {click()}
+        ui.onNodeWithContentDescription("Shift").assertDoesNotExist()
         ui.onNodeWithContentDescription("Function key F1").assertDoesNotExist()
         ui.onNodeWithContentDescription("Show extra keys").assertIsDisplayed()
         assertEquals(escapeBefore,ui.onNodeWithContentDescription("Escape").fetchSemanticsNode().boundsInRoot)
